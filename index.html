@@ -59,16 +59,15 @@ function processCGATS() {
   const rows = dataBlock.split(/\r?\n/).filter(r => r.trim().length > 0);
 
   const parsed = rows.map(row => {
-    const cols = row.split('\t');
+    // 支援 TAB + 任意空白
+    const cols = row.split(/\t\s*/);
 
-    // 強制抓第一欄
     const rawName = cols[0];
     const info = parseName(rawName);
 
     return { cols, info, rawName };
   });
 
-  // Debug: 檢查是否有解析失敗
   const failed = parsed.filter(p => !p.info);
   if (failed.length > 0) {
     console.warn('以下 SAMPLE_NAME 無法解析:', failed.map(f => f.rawName));
@@ -89,7 +88,8 @@ function processCGATS() {
     if (item.info) {
       item.cols[0] = item.info.number + item.info.letter;
     }
-    return item.cols.join('\t');
+    // 輸出維持 TAB + 4 空白
+    return item.cols.join('\t    ');
   });
 
   const result = before + resultRows.join('\n') + '\n' + after;
