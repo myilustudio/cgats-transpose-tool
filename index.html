@@ -24,9 +24,18 @@
 
 <script>
 function parseName(name) {
+  if (!name) return null;
+
+  // 去除可能的引號與空白
+  name = name.replace(/['\"]/g, '').trim();
+
   const m = name.match(/^([A-Za-z]+)(\d+)$/);
   if (!m) return null;
-  return { letter: m[1], number: parseInt(m[2], 10) };
+
+  return {
+    letter: m[1].toUpperCase(),
+    number: parseInt(m[2], 10)
+  };
 }
 
 function processCGATS() {
@@ -49,14 +58,24 @@ function processCGATS() {
 
   const rows = dataBlock.split(/\r?\n/).filter(r => r.trim().length > 0);
 
-  // 解析並儲存
   const parsed = rows.map(row => {
     const cols = row.split('\t');
-    const info = parseName(cols[0]);
-    return { cols, info };
+
+    // 強制抓第一欄
+    const rawName = cols[0];
+    const info = parseName(rawName);
+
+    return { cols, info, rawName };
   });
 
-  // 重新排序（數字優先，再字母）=> 轉置效果
+  // Debug: 檢查是否有解析失敗
+  const failed = parsed.filter(p => !p.info);
+  if (failed.length > 0) {
+    console.warn('以下 SAMPLE_NAME 無法解析:', failed.map(f => f.rawName));
+    alert('有 SAMPLE_NAME 無法解析，請開 console 查看');
+  }
+
+  // 排序（數字 → 字母）
   parsed.sort((a, b) => {
     if (!a.info || !b.info) return 0;
 
@@ -66,7 +85,6 @@ function processCGATS() {
     return a.info.letter.localeCompare(b.info.letter);
   });
 
-  // 轉換名稱 A1 → 1A
   const resultRows = parsed.map(item => {
     if (item.info) {
       item.cols[0] = item.info.number + item.info.letter;
