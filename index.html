@@ -10,12 +10,12 @@
   </style>
 </head>
 <body>
-  <h2>CGATS DATA Transpose Tool</h2>
+  <h2>CGATS SAMPLE_NAME Swap Tool (A1 → 1A)</h2>
 
   <textarea id="input" placeholder="Paste CGATS content here..."></textarea>
 
   <div>
-    <button onclick="transposeCGATS()">轉置</button>
+    <button onclick="processCGATS()">轉換</button>
     <button onclick="copyOutput()">複製結果</button>
     <button onclick="downloadOutput()">下載TXT</button>
   </div>
@@ -23,14 +23,20 @@
   <textarea id="output" placeholder="Result will appear here..."></textarea>
 
 <script>
-function transpose(matrix) {
-  return matrix[0].map((_, colIndex) => matrix.map(row => row[colIndex]));
+function swapSampleName(name) {
+  // 解析像 A12 / B3
+  const match = name.match(/^([A-Za-z]+)(\d+)$/);
+  if (!match) return name;
+
+  const letters = match[1];
+  const numbers = match[2];
+
+  return numbers + letters; // A1 → 1A
 }
 
-function transposeCGATS() {
+function processCGATS() {
   const input = document.getElementById('input').value;
 
-  // 精準匹配整行 BEGIN_DATA / END_DATA
   const beginMatch = input.match(/^BEGIN_DATA\s*$/m);
   const endMatch = input.match(/^END_DATA\s*$/m);
 
@@ -39,38 +45,28 @@ function transposeCGATS() {
     return;
   }
 
-  // 找到 BEGIN_DATA 行結尾
   const beginLineEnd = input.indexOf('\n', beginMatch.index);
   const endLineStart = endMatch.index;
 
-  // 分段
   const before = input.substring(0, beginLineEnd + 1);
   const dataBlock = input.substring(beginLineEnd + 1, endLineStart).trim();
   const after = input.substring(endLineStart);
 
-  // 拆行
   const rows = dataBlock
     .split(/\r?\n/)
     .map(r => r.trim())
     .filter(r => r.length > 0);
 
-  // 轉矩陣
-  const matrix = rows.map(row => row.split(/\s+/));
+  const processedRows = rows.map(row => {
+    const cols = row.split(/\s+/);
 
-  // 檢查矩陣是否規則
-  const colCount = matrix[0].length;
-  const isValid = matrix.every(row => row.length === colCount);
+    // 假設第一欄是 SAMPLE_NAME
+    cols[0] = swapSampleName(cols[0]);
 
-  if (!isValid) {
-    alert('DATA 欄位長度不一致，無法轉置');
-    return;
-  }
+    return cols.join(' ');
+  });
 
-  // 轉置
-  const transposed = transpose(matrix);
-
-  // 組回字串
-  const resultData = transposed.map(row => row.join(' ')).join('\n');
+  const resultData = processedRows.join('\n');
 
   const result = before + resultData + '\n' + after;
 
@@ -89,7 +85,7 @@ function downloadOutput() {
   const blob = new Blob([text], { type: 'text/plain' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = 'transposed.cgats.txt';
+  a.download = 'converted.cgats.txt';
   a.click();
 }
 </script>
