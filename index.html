@@ -68,12 +68,6 @@ function processCGATS() {
     return { cols, info, rawName };
   });
 
-  const failed = parsed.filter(p => !p.info);
-  if (failed.length > 0) {
-    console.warn('以下 SAMPLE_NAME 無法解析:', failed.map(f => f.rawName));
-    alert('有 SAMPLE_NAME 無法解析，請開 console 查看');
-  }
-
   // 排序（數字 → 字母）
   parsed.sort((a, b) => {
     if (!a.info || !b.info) return 0;
