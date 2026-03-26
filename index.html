@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>CGATS Transpose Tool</title>
+  <style>
+    body { font-family: Arial; margin: 20px; }
+    textarea { width: 100%; height: 200px; margin-bottom: 10px; }
+    button { padding: 10px 20px; margin-right: 10px; }
+  </style>
+</head>
+<body>
+  <h2>CGATS DATA Transpose Tool</h2>
+
+  <textarea id="input" placeholder="Paste CGATS content here..."></textarea>
+
+  <div>
+    <button onclick="transposeCGATS()">轉置</button>
+    <button onclick="copyOutput()">複製結果</button>
+    <button onclick="downloadOutput()">下載TXT</button>
+  </div>
+
+  <textarea id="output" placeholder="Result will appear here..."></textarea>
+
+<script>
+function transpose(matrix) {
+  return matrix[0].map((_, colIndex) => matrix.map(row => row[colIndex]));
+}
+
+function transposeCGATS() {
+  const input = document.getElementById('input').value;
+
+  const beginIndex = input.indexOf('BEGIN_DATA');
+  const endIndex = input.indexOf('END_DATA');
+
+  if (beginIndex === -1 || endIndex === -1) {
+    alert('找不到 BEGIN_DATA 或 END_DATA');
+    return;
+  }
+
+  const before = input.substring(0, beginIndex + 'BEGIN_DATA'.length);
+  const dataBlock = input.substring(beginIndex + 'BEGIN_DATA'.length, endIndex).trim();
+  const after = input.substring(endIndex);
+
+  const rows = dataBlock.split(/\r?\n/).map(r => r.trim()).filter(r => r.length > 0);
+
+  const matrix = rows.map(row => row.split(/\s+/));
+
+  const transposed = transpose(matrix);
+
+  const resultData = transposed.map(row => row.join(' ')).join('\n');
+
+  const result = before + '\n' + resultData + '\n' + after;
+
+  document.getElementById('output').value = result;
+}
+
+function copyOutput() {
+  const output = document.getElementById('output');
+  output.select();
+  document.execCommand('copy');
+  alert('已複製');
+}
+
+function downloadOutput() {
+  const text = document.getElementById('output').value;
+  const blob = new Blob([text], { type: 'text/plain' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'transposed.cgats.txt';
+  a.click();
+}
+</script>
+
+</body>
+</html>
