@@ -58,7 +58,8 @@ function processCGATS() {
     .filter(r => r.length > 0);
 
   const processedRows = rows.map(row => {
-    const cols = row.split(/\s+/);
+    // 使用 TAB 作為分隔
+    const cols = row.split('\t');
 
     // 假設第一欄是 SAMPLE_NAME
     cols[0] = swapSampleName(cols[0]);
