@@ -58,13 +58,11 @@ function processCGATS() {
     .filter(r => r.length > 0);
 
   const processedRows = rows.map(row => {
-    // 使用 TAB 作為分隔
     const cols = row.split('\t');
-
-    // 假設第一欄是 SAMPLE_NAME
+  
     cols[0] = swapSampleName(cols[0]);
-
-    return cols.join(' ');
+  
+    return cols.join('\t'); // ← 保持 TAB
   });
 
   const resultData = processedRows.join('\n');
