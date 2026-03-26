@@ -30,27 +30,49 @@ function transpose(matrix) {
 function transposeCGATS() {
   const input = document.getElementById('input').value;
 
-  const beginIndex = input.indexOf('BEGIN_DATA');
-  const endIndex = input.indexOf('END_DATA');
+  // 精準匹配整行 BEGIN_DATA / END_DATA
+  const beginMatch = input.match(/^BEGIN_DATA\s*$/m);
+  const endMatch = input.match(/^END_DATA\s*$/m);
 
-  if (beginIndex === -1 || endIndex === -1) {
+  if (!beginMatch || !endMatch) {
     alert('找不到 BEGIN_DATA 或 END_DATA');
     return;
   }
 
-  const before = input.substring(0, beginIndex + 'BEGIN_DATA'.length);
-  const dataBlock = input.substring(beginIndex + 'BEGIN_DATA'.length, endIndex).trim();
-  const after = input.substring(endIndex);
+  // 找到 BEGIN_DATA 行結尾
+  const beginLineEnd = input.indexOf('\n', beginMatch.index);
+  const endLineStart = endMatch.index;
 
-  const rows = dataBlock.split(/\r?\n/).map(r => r.trim()).filter(r => r.length > 0);
+  // 分段
+  const before = input.substring(0, beginLineEnd + 1);
+  const dataBlock = input.substring(beginLineEnd + 1, endLineStart).trim();
+  const after = input.substring(endLineStart);
 
+  // 拆行
+  const rows = dataBlock
+    .split(/\r?\n/)
+    .map(r => r.trim())
+    .filter(r => r.length > 0);
+
+  // 轉矩陣
   const matrix = rows.map(row => row.split(/\s+/));
 
+  // 檢查矩陣是否規則
+  const colCount = matrix[0].length;
+  const isValid = matrix.every(row => row.length === colCount);
+
+  if (!isValid) {
+    alert('DATA 欄位長度不一致，無法轉置');
+    return;
+  }
+
+  // 轉置
   const transposed = transpose(matrix);
 
+  // 組回字串
   const resultData = transposed.map(row => row.join(' ')).join('\n');
 
-  const result = before + '\n' + resultData + '\n' + after;
+  const result = before + resultData + '\n' + after;
 
   document.getElementById('output').value = result;
 }
