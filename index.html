@@ -23,71 +23,60 @@
   <textarea id="output" placeholder="Result will appear here..."></textarea>
 
 <script>
-function parseName(name) {
+function parseSampleName(name) {
   if (!name) return null;
-
-  // 去除可能的引號與空白
   name = name.replace(/['\"]/g, '').trim();
-
-  const m = name.match(/^([A-Za-z]+)(\d+)$/);
-  if (!m) return null;
-
-  return {
-    letter: m[1].toUpperCase(),
-    number: parseInt(m[2], 10)
-  };
+  const match = name.match(/^([A-Za-z]+)(\d+)$/);
+  if (!match) return null;
+  return { letter: match[1].toUpperCase(), number: parseInt(match[2], 10) };
 }
 
 function processCGATS() {
   const input = document.getElementById('input').value;
 
-  const beginMatch = input.match(/^BEGIN_DATA\s*$/m);
-  const endMatch = input.match(/^END_DATA\s*$/m);
+  // 精確匹配 BEGIN_DATA 和 END_DATA (避免抓到其他類似標籤)
+  const beginIndex = input.search(/^BEGIN_DATA\s*$/m);
+  const endIndex = input.search(/^END_DATA\s*$/m);
 
-  if (!beginMatch || !endMatch) {
+  if (beginIndex === -1 || endIndex === -1 || endIndex <= beginIndex) {
     alert('找不到 BEGIN_DATA 或 END_DATA');
     return;
   }
 
-  const beginLineEnd = input.indexOf('\n', beginMatch.index);
-  const endLineStart = endMatch.index;
+  const before = input.substring(0, beginIndex + 'BEGIN_DATA'.length + 1);
+  const dataBlock = input.substring(beginIndex + 'BEGIN_DATA'.length + 1, endIndex).trim();
+  const after = input.substring(endIndex);
 
-  const before = input.substring(0, beginLineEnd + 1);
-  const dataBlock = input.substring(beginLineEnd + 1, endLineStart).trim();
-  const after = input.substring(endLineStart);
-
+  // DATA 分行
   const rows = dataBlock.split(/\r?\n/).filter(r => r.trim().length > 0);
 
   const parsed = rows.map(row => {
-    // 支援 TAB + 任意空白
+    // 以 TAB + 任意空白分割
     const cols = row.split(/\t\s*/);
-
-    const rawName = cols[0];
-    const info = parseName(rawName);
-
-    return { cols, info, rawName };
+    // 第二欄是 SAMPLE_NAME
+    const rawName = cols[1];
+    const info = parseSampleName(rawName);
+    return { cols, info };
   });
 
-  // 排序（數字 → 字母）
+  // 排序：數字優先 → 英文
   parsed.sort((a, b) => {
     if (!a.info || !b.info) return 0;
-
     if (a.info.number !== b.info.number) {
       return a.info.number - b.info.number;
     }
     return a.info.letter.localeCompare(b.info.letter);
   });
 
+  // 將 SAMPLE_NAME 轉成 數字+字母
   const resultRows = parsed.map(item => {
     if (item.info) {
-      item.cols[0] = item.info.number + item.info.letter;
+      item.cols[1] = item.info.number + item.info.letter;
     }
-    // 輸出維持 TAB + 4 空白
-    return item.cols.join('\t    ');
+    return item.cols.join('\t    '); // 保持 TAB+空白分隔
   });
 
-  const result = before + resultRows.join('\n') + '\n' + after;
-
+  const result = before + '\n' + resultRows.join('\n') + '\n' + after;
   document.getElementById('output').value = result;
 }
 
