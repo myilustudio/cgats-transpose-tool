@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>CGATS Transpose Tool</title>
+  <title>CGATS Grid Transpose Tool</title>
   <style>
     body { font-family: Arial; margin: 20px; }
     textarea { width: 100%; height: 200px; margin-bottom: 10px; }
@@ -10,7 +10,7 @@
   </style>
 </head>
 <body>
-  <h2>CGATS SAMPLE_NAME Swap Tool (A1 → 1A)</h2>
+  <h2>CGATS Grid Transpose (A1 → 1A + 重排)</h2>
 
   <textarea id="input" placeholder="Paste CGATS content here..."></textarea>
 
@@ -23,15 +23,10 @@
   <textarea id="output" placeholder="Result will appear here..."></textarea>
 
 <script>
-function swapSampleName(name) {
-  // 解析像 A12 / B3
-  const match = name.match(/^([A-Za-z]+)(\d+)$/);
-  if (!match) return name;
-
-  const letters = match[1];
-  const numbers = match[2];
-
-  return numbers + letters; // A1 → 1A
+function parseName(name) {
+  const m = name.match(/^([A-Za-z]+)(\d+)$/);
+  if (!m) return null;
+  return { letter: m[1], number: parseInt(m[2], 10) };
 }
 
 function processCGATS() {
@@ -52,30 +47,41 @@ function processCGATS() {
   const dataBlock = input.substring(beginLineEnd + 1, endLineStart).trim();
   const after = input.substring(endLineStart);
 
-  const rows = dataBlock
-    .split(/\r?\n/)
-    .map(r => r.trim())
-    .filter(r => r.length > 0);
+  const rows = dataBlock.split(/\r?\n/).filter(r => r.trim().length > 0);
 
-  const processedRows = rows.map(row => {
+  // 解析並儲存
+  const parsed = rows.map(row => {
     const cols = row.split('\t');
-  
-    cols[0] = swapSampleName(cols[0]);
-  
-    return cols.join('\t'); // ← 保持 TAB
+    const info = parseName(cols[0]);
+    return { cols, info };
   });
 
-  const resultData = processedRows.join('\n');
+  // 重新排序（數字優先，再字母）=> 轉置效果
+  parsed.sort((a, b) => {
+    if (!a.info || !b.info) return 0;
 
-  const result = before + resultData + '\n' + after;
+    if (a.info.number !== b.info.number) {
+      return a.info.number - b.info.number;
+    }
+    return a.info.letter.localeCompare(b.info.letter);
+  });
+
+  // 轉換名稱 A1 → 1A
+  const resultRows = parsed.map(item => {
+    if (item.info) {
+      item.cols[0] = item.info.number + item.info.letter;
+    }
+    return item.cols.join('\t');
+  });
+
+  const result = before + resultRows.join('\n') + '\n' + after;
 
   document.getElementById('output').value = result;
 }
 
 function copyOutput() {
-  const output = document.getElementById('output');
-  output.select();
-  document.execCommand('copy');
+  const text = document.getElementById('output').value;
+  navigator.clipboard.writeText(text);
   alert('已複製');
 }
 
